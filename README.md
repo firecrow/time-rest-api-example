@@ -28,7 +28,7 @@ The system is in JavaScript and Node.js with no library use above native node an
 
 This is also why the `handleResponse` object does not recieve the native `Node.js` response object, it gets the `method`, `path` and `parameters` parsed out seperately so that it could move to another language/framework/architecture easily without dependencies on `Node.js`
 
-The JavaScript is very raw, I have [another project](/framework-apalooza) which shows multiple front end frameworks working together that follows a more conventional approach when I'm within those frameworks.
+The JavaScript is very raw, I have [another project](https://github.com/firecrow/framework-apalooza/) which shows multiple front end frameworks working together that follows a more conventional approach when I'm within those frameworks.
 
 # Code Organization
 
