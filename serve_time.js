@@ -25,7 +25,11 @@ function timeServe(res, method, path, params){
 
 function timeBasicServe(res, method, path, params){
     res.writeHead(200, {'Content-Type': 'text/plain'});
-    res.end("basic time here");
+    const now = new Date();
+    const obj = {
+        currentTime: now.toUTCString(),
+    };
+    res.end(JSON.stringify(obj));
 }
 
 function notFoundServe(res, method, path, params){
