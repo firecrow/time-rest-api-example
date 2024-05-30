@@ -1,8 +1,43 @@
 const http = require('http');
 const fs = require('fs');
+const tzlist = require('./tzlist');
 
 TZ_KEYWORD = 'timezone';
 TIME_KEYWORD = 'time';
+
+const param_keys = [TZ_KEYWORD];
+
+function parseParams(url){
+    console.log('parsing ' + url);
+    let params = {};
+    if(!url){
+        return params;
+    }
+    const segs = url.split('/');
+    if(!segs.length){
+        return params;
+    }
+
+    let key = null;
+    segs.shift();
+    for(let i = 0; i < segs.length; i++){
+        const s = segs[i];
+        if(key){
+            params[key] = s;        
+            key = null;
+            continue;
+        }
+        if(param_keys.indexOf(s) !== -1){
+            key = s;
+            params[key] = null;
+            continue;
+        }else{
+            params[s] = null;
+            continue;
+        }
+    }
+    return params;
+}
 
 /* election functions */
 function always(method, path, params){
@@ -10,36 +45,55 @@ function always(method, path, params){
 }
 
 function hasOffset(method, path, params){
-    return params.indexOf(TZ_KEYWORD) != -1;
+    return !!params[TZ_KEYWORD];
 }
 
 function hasTime(method, path, params){
-    return params[0] == TIME_KEYWORD;
+    return TIME_KEYWORD in params;
 }
 
 /* response serve functions */
 function timeServe(res, method, path, params){
-    res.writeHead(200, {'Content-Type': 'text/plain'});
-    res.end("time with offset here");
+    const now = new Date();
+    const obj = {
+        currentTime: now.toISOString(),
+    };
+
+    const tzArg = params[TZ_KEYWORD];
+    const tz = tzlist.tzabbrev[tzArg];
+    if(tz){
+        obj.timezoneMeta = tz
+    }else{
+        obj.error = "Timezone not found in international list, looking for "+tzArg;
+    }
+
+    res.writeHead(200, {'Content-Type': 'application/json'});
+    res.end(JSON.stringify(obj));
 }
 
 function timeBasicServe(res, method, path, params){
-    res.writeHead(200, {'Content-Type': 'text/plain'});
     const now = new Date();
     const obj = {
-        currentTime: now.toUTCString(),
+        currentTime: now.toISOString(),
     };
+    res.writeHead(200, {'Content-Type': 'application/json'});
     res.end(JSON.stringify(obj));
 }
 
 function notFoundServe(res, method, path, params){
-    res.writeHead(404, {'Content-Type': 'text/plain'});
-    res.end("route not found");
+    const obj = {
+        error: "Not Found",
+    };
+    res.writeHead(404, {'Content-Type': 'application/json'});
+    res.end(JSON.stringify(obj));
 }
 
 function errorServe(res, method, path, params){
-    res.writeHead(500, {'Content-Type': 'text/plain'});
-    res.end("unhandled server error");
+    const obj = {
+        error: "Server Error (Internal)",
+    };
+    res.writeHead(500, {'Content-Type': 'application/json'});
+    res.end(JSON.stringify(obj));
 }
 
 /* class for making handlers */
@@ -78,9 +132,8 @@ http.createServer(function (req, res) {
     let done = false;
     const method = req.method;
     const path = req.url;
-    const params = req.url.split('/');
-    params.shift();
-    console.log('Method '+method+' '+path+' ', params);
+    const params = parseParams(path);
+    console.log(params);
 
     for(let i = 0; i < handlers.length; i++){
       let handle = handlers[i];
