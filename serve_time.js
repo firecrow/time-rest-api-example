@@ -7,36 +7,14 @@ TIME_KEYWORD = 'time';
 
 const param_keys = [TZ_KEYWORD];
 
-/* parse the rest api into an object for all keywords that expect arguments listed in `param_keys` */
-function parseParams(url){
-    let params = {};
-    if(!url){
-        return params;
+/* util functions */
+function adjustTime(now, tz){
+    const adjusted = new Date(now);
+    adjusted.setHours(adjusted.getHours() + tz.hours);
+    if(tz.minutes){
+        adjusted.setMinutes(adjusted.getMinutes() + tz.minutes);
     }
-    const segs = url.split('/');
-    if(!segs.length){
-        return params;
-    }
-
-    let key = null;
-    segs.shift();
-    for(let i = 0; i < segs.length; i++){
-        const s = segs[i];
-        if(key){
-            params[key] = s;        
-            key = null;
-            continue;
-        }
-        if(param_keys.indexOf(s) !== -1){
-            key = s;
-            params[key] = null;
-            continue;
-        }else{
-            params[s] = null;
-            continue;
-        }
-    }
-    return params;
+    return adjusted
 }
 
 /* election functions */
@@ -53,35 +31,31 @@ function hasTime(method, path, params){
 }
 
 /* response serve functions */
-function timeServe(res, method, path, params){
-    const now = new Date();
+function timeServe(res, now, method, path, params){
     const obj = {
         currentTime: now.toISOString(),
     };
 
     const tzArg = params[TZ_KEYWORD] && params[TZ_KEYWORD].toUpperCase();
     const tz = tzlist.tzabbrev[tzArg];
+    let code = 500;
     if(tz){
-        const adjusted = new Date(now);
-        adjusted.setHours(adjusted.getHours() + tz.hours);
-        if(tz.minutes){
-            adjusted.setMinutes(adjusted.getMinutes() + tz.minutes);
-        }
-
+        const adjusted = adjustTime(now, tz);
         obj.ajustedTime = adjusted.toISOString();
         obj.timezone = structuredClone(tz);
         obj.timezone.abbrev = tzArg;
         success = true;
+        code = 200;
     }else{
         obj.error = "Timezone not found in international list, looking for "+tzArg;
+        code = 400;
     }
 
-    res.writeHead(200, {'Content-Type': 'application/json'});
+    res.writeHead(code, {'Content-Type': 'application/json'});
     res.end(JSON.stringify(obj));
 }
 
-function timeBasicServe(res, method, path, params){
-    const now = new Date();
+function timeBasicServe(res, now, method, path, params){
     const obj = {
         currentTime: now.toISOString(),
     };
@@ -89,7 +63,7 @@ function timeBasicServe(res, method, path, params){
     res.end(JSON.stringify(obj));
 }
 
-function notFoundServe(res, method, path, params){
+function notFoundServe(res, now, method, path, params){
     const obj = {
         error: "Not Found",
     };
@@ -97,7 +71,7 @@ function notFoundServe(res, method, path, params){
     res.end(JSON.stringify(obj));
 }
 
-function errorServe(res, method, path, params){
+function errorServe(res, now, method, path, params){
     const obj = {
         error: "Server Error (Internal)",
     };
@@ -122,8 +96,8 @@ class Handler {
         return true;
     }
 
-    handle(res, method, path, params){
-        return this.process(res, method, path, params);
+    handle(res, now, method, path, params){
+        return this.process(res, now, method, path, params);
     }
 }
 
@@ -136,31 +110,71 @@ const handlers = [
 
 const errorHandler = new Handler(always, errorServe);
 
-
-/* server and handler runner */
-function handleRequest(res, method, path, params){
-    let done = false;
-    for(let i = 0; i < handlers.length; i++){
-      let handle = handlers[i];
-      if(handle.elect(method, path, params)){
-          handle.handle(res, method, path, params); 
-          done = true;
-          break;
-      }
+class Serve {
+    /* server and handler runner */
+    handleRequest(res, now, method, path, params){
+        let done = false;
+        for(let i = 0; i < handlers.length; i++){
+          let handle = handlers[i];
+          if(handle.elect(method, path, params)){
+              handle.handle(res, now, method, path, params); 
+              done = true;
+              break;
+          }
+        }
+        
+        if(!done){
+            errorHandler.handle(res, now, method, path, params);
+        }
     }
-    
-    if(!done){
-        errorHandler.handle(res, method, path, params);
+    getNow(){
+        return new Date();
+    }
+    serve(port){
+        /* server instantiation */
+        const self = this;
+        http.createServer(function (req, res) {
+            const method = req.method;
+            const path = req.url;
+            const params = self.parseParams(path);
+
+            self.handleRequest(res, self.getNow(), method, path, params);
+        }).listen(port);
+    }
+    /* parse the rest api into an object for all keywords 
+     * that expect arguments listed in `param_keys` 
+     */
+    parseParams(url){
+        let params = {};
+        if(!url){
+            return params;
+        }
+        const segs = url.split('/');
+        if(!segs.length){
+            return params;
+        }
+
+        let key = null;
+        segs.shift();
+        for(let i = 0; i < segs.length; i++){
+            const s = segs[i];
+            if(key){
+                params[key] = s;        
+                key = null;
+                continue;
+            }
+            if(param_keys.indexOf(s) !== -1){
+                key = s;
+                params[key] = null;
+                continue;
+            }else{
+                params[s] = null;
+                continue;
+            }
+        }
+        return params;
     }
 }
 
-/* server instantiation */
-http.createServer(function (req, res) {
-    const method = req.method;
-    const path = req.url;
-    const params = parseParams(path);
 
-    handleRequest(res, method, path, params);
-}).listen(9000);
-
-module.exports = {handleRequest};
+module.exports = {Serve, TZ_KEYWORD, adjustTime};
