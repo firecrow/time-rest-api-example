@@ -7,8 +7,8 @@ TIME_KEYWORD = 'time';
 
 const param_keys = [TZ_KEYWORD];
 
+/* parse the rest api into an object for all keywords that expect arguments listed in `param_keys` */
 function parseParams(url){
-    console.log('parsing ' + url);
     let params = {};
     if(!url){
         return params;
@@ -136,14 +136,10 @@ const handlers = [
 
 const errorHandler = new Handler(always, errorServe);
 
-/* server instantiation */
-http.createServer(function (req, res) {
-    let done = false;
-    const method = req.method;
-    const path = req.url;
-    const params = parseParams(path);
-    console.log(params);
 
+/* server and handler runner */
+function handleRequest(res, method, path, params){
+    let done = false;
     for(let i = 0; i < handlers.length; i++){
       let handle = handlers[i];
       if(handle.elect(method, path, params)){
@@ -156,5 +152,13 @@ http.createServer(function (req, res) {
     if(!done){
         errorHandler.handle(res, method, path, params);
     }
+}
 
+/* server instantiation */
+http.createServer(function (req, res) {
+    const method = req.method;
+    const path = req.url;
+    const params = parseParams(path);
+
+    handleRequest(res, method, path, params);
 }).listen(9000);
