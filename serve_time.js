@@ -4,14 +4,13 @@ const fs = require('fs');
 TZ_KEYWORD = 'timezone';
 TIME_KEYWORD = 'time';
 
-
 /* election functions */
 function always(method, path, params){
     return true;
 }
 
 function hasOffset(method, path, params){
-    return params.indexOf(TZ_KEYWORD) != 0;
+    return params.indexOf(TZ_KEYWORD) != -1;
 }
 
 function hasTime(method, path, params){
@@ -34,7 +33,7 @@ function notFoundServe(res, method, path, params){
     res.end("route not found");
 }
 
-function errorHandler(res, method, path, params){
+function errorServe(res, method, path, params){
     res.writeHead(500, {'Content-Type': 'text/plain'});
     res.end("unhandled server error");
 }
@@ -63,12 +62,12 @@ class Handler {
 
 /* handler instantiation */
 const handlers = [
-    Handler([hasTime, hasOffset], timeServe),
-    Handler([hasTime], timeBasicServe),
-    Handler([always], notFoundServe)
+    new Handler([hasTime, hasOffset], timeServe),
+    new Handler([hasTime], timeBasicServe),
+    new Handler([always], notFoundServe)
 ];
 
-const errorHandler = Handler(always, errorServe);
+const errorHandler = new Handler(always, errorServe);
 
 /* server instantiation */
 http.createServer(function (req, res) {
@@ -76,12 +75,15 @@ http.createServer(function (req, res) {
     const method = req.method;
     const path = req.url;
     const params = req.url.split('/');
+    params.shift();
+    console.log('Method '+method+' '+path+' ', params);
 
     for(let i = 0; i < handlers.length; i++){
       let handle = handlers[i];
-      if(handle.elect(req.method, req.url)){
+      if(handle.elect(method, path, params)){
           handle.handle(res, method, path, params); 
           done = true;
+          break;
       }
     }
     
