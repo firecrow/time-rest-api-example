@@ -45,7 +45,7 @@ function always(method, path, params){
 }
 
 function hasOffset(method, path, params){
-    return !!params[TZ_KEYWORD];
+    return TZ_KEYWORD in params;
 }
 
 function hasTime(method, path, params){
@@ -59,10 +59,19 @@ function timeServe(res, method, path, params){
         currentTime: now.toISOString(),
     };
 
-    const tzArg = params[TZ_KEYWORD];
+    const tzArg = params[TZ_KEYWORD] && params[TZ_KEYWORD].toUpperCase();
     const tz = tzlist.tzabbrev[tzArg];
     if(tz){
-        obj.timezoneMeta = tz
+        const adjusted = new Date(now);
+        adjusted.setHours(adjusted.getHours() + tz.hours);
+        if(tz.minutes){
+            adjusted.setMinutes(adjusted.getMinutes() + tz.minutes);
+        }
+
+        obj.ajustedTime = adjusted.toISOString();
+        obj.timezone = structuredClone(tz);
+        obj.timezone.abbrev = tzArg;
+        success = true;
     }else{
         obj.error = "Timezone not found in international list, looking for "+tzArg;
     }
