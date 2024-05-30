@@ -6,6 +6,19 @@ This is a small example, that was requested during my current job hunt. The purp
 
 The main system is comprised of a series of `electors` and `handlers`. For the list of `handlers` if all `electors` pass then the `handler.handle` function will be run.
 
+exceprt from serve_time.js:
+
+```JavaScript
+
+    const handlers = [
+        new Handler([hasTime, hasOffset], timeServe),
+        new Handler([hasTime], timeBasicServe),
+        new Handler([always], notFoundServe)
+    ];
+
+    const errorHandler = new Handler(always, errorServe);
+```
+
 This is why the server is instantiated with a list of handlers.
 
 The reason for this architecture is to ensure it can grow over time, having more than one handler for gathering more than one thing, if necessary.
