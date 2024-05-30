@@ -5,7 +5,7 @@ const basicSet = [
     new TestCase(
         "Expect time to return current time",
         new TestArg("GET", "/time", {time: null}),
-            {code: 700000, response: {"currentTime":"NOW"}}),
+            {code: 200, response: {"currentTime":"NOW"}}),
     new TestCase(
         "Expect timezone without an arg to return an error",
         new TestArg("GET", "/time/timezone", {time: null, timezone: null}),
