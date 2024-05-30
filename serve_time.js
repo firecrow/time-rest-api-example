@@ -145,6 +145,35 @@ class Serve {
      * that expect arguments listed in `param_keys` 
      */
     parseParams(url){
+        /* The param parser allocates a value in an objcect based on the previous value 
+         *being in the `param_keys` list 
+
+         for example:
+         
+             /time/timezone/BST -> ['', 'time', 'timezone', 'BST']
+
+         `timezone` is in the param_keys list as the value of TZ_KEYWORD
+         when that is encountered it is saved as the value of `key`
+
+         and then used to make
+
+             params[key] = 'BST'
+
+         when 'BST' is encountered as the next element in the array
+
+
+         otherwise a null value is placed, for example
+
+             params["time"] = null
+
+
+         this will be checked above with a statement such as
+
+             key in params
+
+         which passes for null, and fails for undefined
+
+         */
         let params = {};
         if(!url){
             return params;
