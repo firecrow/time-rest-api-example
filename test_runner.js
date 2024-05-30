@@ -18,7 +18,8 @@ class TestArg {
 }
 
 class TestCase {
-    constructor(arg, result){
+    constructor(name, arg, result){
+        this.name = name;
         this.arg = arg;
         this.result = result;
     }
@@ -44,13 +45,14 @@ function RunCaseSet(set){
     const now = new Date();
     const serve = new serveTime.Serve();
     for(let i = 0; i < set.length; i++){
+        const test = set[i];
         const res = new MockRes();
         const arg = set[i].arg;
         const result = set[i].result;
         const response = serve.handleRequest(res, now, arg.method, arg.path, arg.params);
 
         if(res.code != result.code){
-            throw new Error('test failure code mismatch: ' + set[i]);
+            throw new Error(`test failure code mismatch: have ${res.code}  expected ${result.code}  for ${test.name} - ${test} - ${res.content}`);
         }
 
         let adjusted = null;
@@ -71,12 +73,10 @@ function RunCaseSet(set){
         }
 
         if(JSON.stringify(result.response) !== JSON.stringify(jsonData)){
-            console.log(JSON.stringify(result.response))
-            console.log(JSON.stringify(jsonData));
-            throw new Error('test failure: ' + set[i]);
+            throw new Error(`test failed results mismatch for ${test.name} - ${test}`);
         }
 
-        console.log('TEST PASS:' + set[i]);
+        console.log(`TEST PASS: ${test.name}`);
     }
 }
 

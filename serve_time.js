@@ -27,7 +27,7 @@ function hasOffset(method, path, params){
 }
 
 function hasTime(method, path, params){
-    return TIME_KEYWORD in params;
+    return method === "GET" && TIME_KEYWORD in params;
 }
 
 /* response serve functions */
