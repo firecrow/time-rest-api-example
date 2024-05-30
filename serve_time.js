@@ -162,3 +162,5 @@ http.createServer(function (req, res) {
 
     handleRequest(res, method, path, params);
 }).listen(9000);
+
+module.exports = {handleRequest};
